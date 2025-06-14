@@ -33,48 +33,57 @@
     .info p {
       margin: 0.5rem 0;
     }
+    .stats {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
-  <h1>استعلام عن معلومات المركبة</h1>
+  <h1>استعلام عن معلومات الرقم الموحد بواسطة مساري علي ناصر</h1>
   <input type="text" id="uniqueId" placeholder="ادخل الرقم الموحد" />
   <button onclick="fetchData()">جلب المعلومات</button>
+  <div class="stats" id="stats"></div>
   <div class="info" id="output"></div>
 
   <script>
     async function fetchData() {
       const id = document.getElementById("uniqueId").value;
       const output = document.getElementById("output");
+      const stats = document.getElementById("stats");
       output.innerHTML = "جارٍ التحميل...";
+      stats.innerHTML = "";
 
       try {
-        const res = await fetch("/api/proxy?unique=" + id);
+        const res = await fetch("https://cors-anywhere.herokuapp.com/http://176.241.95.201:8092/id?unique=" + id, {
+          method: "GET",
+          headers: {
+            "Authorization": "Basic YWRtaW46MjQxMDY3ODkw"
+          }
+        });
+
         const data = await res.json();
 
         if (data.trips && data.trips.length > 0) {
-          let html = "";
+          let withSonar = [];
+          let withoutSonar = [];
+
           data.trips.forEach(trip => {
-            const truckNumber = trip.truck_number || "غير متوفر";
-            const driver = trip.driver || "غير متوفر";
-            const containerNumber = trip.container_number || "غير متوفر";
-            const manifests = trip.sonarData?.manifests;
-            let sonarInfo = "";
-
-            if (Array.isArray(manifests) && manifests.length > 0) {
-              sonarInfo = "بيها صور سونار";
-            } else {
-              sonarInfo = "السيارة ما بيها سونار";
-            }
-
-            html += `
-              <p><strong>رقم السيارة:</strong> ${truckNumber}</p>
-              <p><strong>السائق:</strong> ${driver}</p>
-              <p><strong>رقم الحاوية:</strong> ${containerNumber}</p>
-              <p><strong>المنافيست:</strong> ${sonarInfo}</p>
+            const hasSonar = trip.sonarData?.manifests?.length > 0;
+            const infoHTML = `
+              <p><strong>رقم السيارة:</strong> ${trip.truck_number}</p>
+              <p><strong>رقم السائق:</strong> ${trip.driver}</p>
+              <p><strong>رقم الحاوية:</strong> ${trip.container_number}</p>
+              <p><strong>المنافيست:</strong> ${hasSonar ? "بيها صور سونار" : "السيارة مابيهة سونار"}</p>
               <hr />
             `;
+            hasSonar ? withSonar.push(infoHTML) : withoutSonar.push(infoHTML);
           });
-          output.innerHTML = html;
+
+          const totalWith = withSonar.length;
+          const totalWithout = withoutSonar.length;
+          stats.innerHTML = `عدد السيارات التي بيها سونار: ${totalWith} | عدد السيارات التي لا تحتوي على سونار: ${totalWithout}`;
+          output.innerHTML = withoutSonar.join('') + withSonar.join('');
         } else {
           output.innerHTML = "لا توجد معلومات متاحة لهذا الرقم.";
         }
