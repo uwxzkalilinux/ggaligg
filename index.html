@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Info Lookup</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      color: #333;
+    }
+    input, button {
+      padding: 0.5rem;
+      margin: 0.5rem;
+      font-size: 1rem;
+    }
+    .info {
+      margin-top: 1rem;
+      background-color: #fff;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      width: 100%;
+      max-width: 600px;
+    }
+    .info p {
+      margin: 0.5rem 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>استعلام عن معلومات المركبة</h1>
+  <input type="text" id="uniqueId" placeholder="ادخل الرقم الموحد" />
+  <button onclick="fetchData()">جلب المعلومات</button>
+  <div class="info" id="output"></div>
+
+  <script>
+    async function fetchData() {
+      const id = document.getElementById("uniqueId").value;
+      const output = document.getElementById("output");
+      output.innerHTML = "جارٍ التحميل...";
+
+      try {
+        const res = await fetch("/api/proxy?unique=" + id);
+        const data = await res.json();
+
+        if (data.trips && data.trips.length > 0) {
+          let html = "";
+          data.trips.forEach(trip => {
+            const truckNumber = trip.truck_number || "غير متوفر";
+            const driver = trip.driver || "غير متوفر";
+            const containerNumber = trip.container_number || "غير متوفر";
+            const manifests = trip.sonarData?.manifests;
+            let sonarInfo = "";
+
+            if (Array.isArray(manifests) && manifests.length > 0) {
+              sonarInfo = "بيها صور سونار";
+            } else {
+              sonarInfo = "السيارة ما بيها سونار";
+            }
+
+            html += `
+              <p><strong>رقم السيارة:</strong> ${truckNumber}</p>
+              <p><strong>السائق:</strong> ${driver}</p>
+              <p><strong>رقم الحاوية:</strong> ${containerNumber}</p>
+              <p><strong>المنافيست:</strong> ${sonarInfo}</p>
+              <hr />
+            `;
+          });
+          output.innerHTML = html;
+        } else {
+          output.innerHTML = "لا توجد معلومات متاحة لهذا الرقم.";
+        }
+      } catch (error) {
+        output.innerHTML = "حدث خطأ أثناء جلب البيانات: " + error;
+      }
+    }
+  </script>
+</body>
+</html>
